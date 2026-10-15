@@ -516,6 +516,10 @@ struct SettingsView: View {
                         Text("button when text is selected")
                     }
                 }
+                Text("⌃⌥E opens the panel either way.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 20) // line up with the toggle's label
                 Toggle("Start at login",
                        isOn: Binding(get: { settings.startAtLogin }, set: { settings.setStartAtLogin($0) }))
             }
