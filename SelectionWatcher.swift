@@ -94,10 +94,10 @@ struct SelectionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "sparkles")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 28, height: 28)
-                .background(Color(white: 0.08), in: Circle())
+                .frame(width: 34, height: 34)
+                .background(Color(white: 0.2), in: Circle())
                 .overlay(Circle().strokeBorder(.white.opacity(0.22), lineWidth: 1)) // keeps the edge visible on dark apps
                 .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
                 .padding(4) // room for the shadow inside the panel

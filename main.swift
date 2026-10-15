@@ -80,7 +80,7 @@ struct EditAction {
 let editActions = [
     EditAction(title: "Proofread", instruction: "Fix spelling, grammar, and punctuation mistakes. Do not change anything else."),
     EditAction(title: "Shorten", instruction: "Make it more concise while keeping the key points."),
-    EditAction(title: "Professional", instruction: "Rewrite it in a clear, professional tone."),
+    EditAction(title: "Formal", instruction: "Rewrite it in a clear, professional tone."),
     EditAction(title: "Summarise",
                instruction: "Summarize it concisely in the same language. Use a few short bullet points starting with • for longer text, or one or two sentences for short text.",
                showsResult: true),
