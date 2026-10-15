@@ -1,14 +1,14 @@
 #!/bin/bash
-# Builds build/SelectEdit.app, runs the self-test, and signs it ad hoc.
+# Builds build/Proofread.app, runs the self-test, signs it, and installs it to /Applications.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP=build/SelectEdit.app
+APP=build/Proofread.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
-swiftc -O main.swift SelectionWatcher.swift -o "$APP/Contents/MacOS/SelectEdit"
-"$APP/Contents/MacOS/SelectEdit" --selftest
+swiftc -O main.swift SelectionWatcher.swift -o "$APP/Contents/MacOS/Proofread"
+"$APP/Contents/MacOS/Proofread" --selftest
 
 # App icon: render once at 1024px, downscale into an iconset, pack as .icns.
 mkdir -p "$APP/Contents/Resources" build/AppIcon.iconset
@@ -25,8 +25,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>local.selectedit</string>
-  <key>CFBundleName</key><string>SelectEdit</string>
-  <key>CFBundleExecutable</key><string>SelectEdit</string>
+  <key>CFBundleName</key><string>Proofread</string>
+  <key>CFBundleExecutable</key><string>Proofread</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
@@ -44,8 +44,10 @@ echo "Signed with: ${IDENTITY:-ad-hoc}"
 echo "Built $APP"
 
 # Install over the copy that Login Items launches, then restart it.
-INSTALLED=/Applications/SelectEdit.app
-pkill -x SelectEdit || true
+INSTALLED=/Applications/Proofread.app
+pkill -x Proofread || true
+pkill -x Wand || true
+pkill -x SelectEdit || true # earlier app names
 rm -rf "$INSTALLED"
 ditto "$APP" "$INSTALLED"
 open "$INSTALLED"

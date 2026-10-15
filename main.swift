@@ -1,7 +1,8 @@
-// SelectEdit: select text anywhere, press ⌃⌥E, pick an edit, and the AI result replaces the selection.
+// Proofread: select text anywhere, press ⌃⌥E, pick an edit, and the AI result replaces the selection.
 import AppKit
 import Carbon.HIToolbox
 import Security
+import ServiceManagement
 import SwiftUI
 
 // MARK: - Config
@@ -103,7 +104,7 @@ enum Settings {
 enum Keychain {
     private static func query(_ account: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "SelectEdit",
+         kSecAttrService as String: "SelectEdit", // pre-rename name; changing it would orphan saved keys
          kSecAttrAccount as String: account]
     }
 
@@ -440,15 +441,19 @@ var hotKeyHandler: (() -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "wand.and.sparkles", accessibilityDescription: "SelectEdit")
+        statusItem.button?.image = NSImage(systemSymbolName: "wand.and.sparkles", accessibilityDescription: "Proofread")
         let menu = NSMenu()
         menu.addItem(withTitle: "Select text, then click ✨ Edit or press ⌃⌥E", action: nil, keyEquivalent: "")
         menu.addItem(.separator())
         let toggle = menu.addItem(withTitle: "Show Edit Button on Selection", action: #selector(toggleSelectionButton(_:)), keyEquivalent: "")
         toggle.target = self
         toggle.state = SelectionWatcher.isEnabled ? .on : .off
+        enableLoginOnFirstRun()
+        let login = menu.addItem(withTitle: "Start at Login", action: #selector(toggleStartAtLogin(_:)), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",").target = self
-        menu.addItem(withTitle: "Quit SelectEdit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Proofread", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
         installEditMenu()
 
@@ -460,6 +465,30 @@ var hotKeyHandler: (() -> Void)?
         registerHotKey()
         _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
         if Keychain.get(Settings.provider.rawValue) == nil { showSettings() }
+    }
+
+    /// Start at login was the setup default before this toggle existed, so turn it on once.
+    private func enableLoginOnFirstRun() {
+        let key = "startAtLoginInitialized.proofread" // re-register after the rename moved the app
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        do { try SMAppService.mainApp.register() } catch {
+            NSLog("Proofread: couldn't enable Start at Login: %@", error.localizedDescription)
+        }
+    }
+
+    @objc func toggleStartAtLogin(_ item: NSMenuItem) {
+        let service = SMAppService.mainApp
+        do {
+            if service.status == .enabled { try service.unregister() } else { try service.register() }
+        } catch {
+            showAlert("Couldn't change Start at Login", error.localizedDescription)
+        }
+        if service.status == .requiresApproval {
+            showAlert("Approve Proofread", "Allow Proofread in System Settings → General → Login Items.")
+            SMAppService.openSystemSettingsLoginItems()
+        }
+        item.state = service.status == .enabled ? .on : .off
     }
 
     @objc func toggleSelectionButton(_ item: NSMenuItem) {
@@ -490,7 +519,7 @@ var hotKeyHandler: (() -> Void)?
         guard panel == nil else { return }
         guard AXIsProcessTrusted() else {
             showAlert("Accessibility access needed",
-                      "In the Accessibility list, remove any old SelectEdit entry with the − button, "
+                      "In the Accessibility list, remove any old Proofread entry with the − button, "
                         + "add this app again with + (or relaunch it), switch it on, then try again.")
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
             return
@@ -584,7 +613,7 @@ var hotKeyHandler: (() -> Void)?
         let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(close: { [weak self] in
             self?.settingsWindow?.close()
         })))
-        window.title = "SelectEdit Settings"
+        window.title = "Proofread Settings"
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         window.delegate = self

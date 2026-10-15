@@ -1,4 +1,4 @@
-# SelectEdit
+# Proofread
 
 Menu-bar app for macOS: select text in any app, click the **✨ Edit** button that appears (or press **⌃⌥E**), then pick an edit. The AI result replaces the selection.
 
@@ -16,14 +16,14 @@ Turn it off from the menu bar icon → Show Edit Button on Selection. Your clipb
 ./build.sh
 ```
 
-This builds, runs the self-test, signs, installs to `/Applications/SelectEdit.app`, and restarts the app.
+This builds, runs the self-test, signs, installs to `/Applications/Proofread.app`, and restarts the app.
 
 On first launch:
 1. Enter your API key in the Settings dialog (Gemini: aistudio.google.com/apikey).
-2. Grant Accessibility access: System Settings → Privacy & Security → Accessibility → enable SelectEdit. It is needed to send ⌘C/⌘V.
+2. Grant Accessibility access: System Settings → Privacy & Security → Accessibility → enable Proofread. It is needed to send ⌘C/⌘V.
 
 `build.sh` signs with the first code-signing identity in your keychain (override with `SIGN_IDENTITY=...`).
 That keeps the app's identity stable, so the Accessibility and Keychain grants survive rebuilds.
 With no identity it falls back to ad-hoc signing, and macOS asks again after every rebuild.
 
-To start at login, add `/Applications/SelectEdit.app` under System Settings → General → Login Items.
+Start at Login is on by default; turn it off from the menu bar icon → Start at Login.
