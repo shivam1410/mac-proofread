@@ -32,3 +32,11 @@ IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | awk -F'"
 codesign --force --sign "${IDENTITY:--}" "$APP"
 echo "Signed with: ${IDENTITY:-ad-hoc}"
 echo "Built $APP"
+
+# Install over the copy that Login Items launches, then restart it.
+INSTALLED=/Applications/SelectEdit.app
+pkill -x SelectEdit || true
+rm -rf "$INSTALLED"
+ditto "$APP" "$INSTALLED"
+open "$INSTALLED"
+echo "Installed and launched $INSTALLED"

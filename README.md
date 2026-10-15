@@ -14,8 +14,9 @@ Turn it off from the menu bar icon → Show Edit Button on Selection. Your clipb
 
 ```bash
 ./build.sh
-open build/SelectEdit.app
 ```
+
+This builds, runs the self-test, signs, installs to `/Applications/SelectEdit.app`, and restarts the app.
 
 On first launch:
 1. Enter your API key in the Settings dialog (Gemini: aistudio.google.com/apikey).
@@ -25,4 +26,4 @@ On first launch:
 That keeps the app's identity stable, so the Accessibility and Keychain grants survive rebuilds.
 With no identity it falls back to ad-hoc signing, and macOS asks again after every rebuild.
 
-To start at login, move `build/SelectEdit.app` to `/Applications` and add it under System Settings → General → Login Items.
+To start at login, add `/Applications/SelectEdit.app` under System Settings → General → Login Items.
