@@ -1,18 +1,39 @@
 # Proofread
 
-Menu-bar app for macOS: select text in any app, click the **✨** button that appears (or press **⌃⌥E**), then pick an edit. The AI result replaces the selection.
+Menu-bar app for macOS that edits, summarizes, or answers questions about text you select in any app.
+Bring your own Gemini or OpenAI API key.
 
-The ✨ button shows after a drag-select or double/triple-click, and hides on the next click, keypress, scroll, or after 4 seconds.
-Turn it off in Settings → "Show ✨ button when text is selected". Your clipboard is only touched when you click it.
+## How it works
 
-- Type a custom instruction and press Return, or use the quick actions: Proofread ⌘1, Improve ⌘2, Shorter ⌘3, Longer ⌘4, Professional ⌘5, Casual ⌘6, Summarize ⌘7.
-- Summarize shows the summary in the panel (Copy or Replace Selection), so it works on read-only text like chats.
-- On read-only text (chats, web pages), every result shows in the panel, and typed prompts are answered as questions, e.g. "who said what?".
-- Esc closes the panel. ⌘Z in the target app undoes the replacement.
-- Works with Gemini (default, free tier is enough) or OpenAI. API keys are stored in the macOS Keychain.
-- Settings (menu bar icon) lists your account's models live, marked ⚡ fastest/cheapest, ⭐ balanced, 🧠 smartest, ❔ unrated new name.
+Select text, then click the **✨** button that appears next to it, or press **⌃⌥E**. A panel opens with:
 
-## Build and run
+- **A prompt box.** Type any instruction and press Return.
+- **Quick actions:** Proofread ⌘1, Improve ⌘2, Shorter ⌘3, Longer ⌘4, Professional ⌘5, Casual ⌘6, Summarize ⌘7.
+
+What happens to the result depends on where the text is:
+
+| Selection | Edits (Proofread, Improve, typed instructions…) | Summarize |
+|---|---|---|
+| Editable text (Notion page, text field) | Replace the selection. ⌘Z in the app undoes it. | Shown in the panel |
+| Read-only text (chat, web page) | Shown in the panel. Typed prompts are answered as questions, e.g. "who said what?" | Shown in the panel |
+
+Results shown in the panel are formatted Markdown: nested bullets (● ○ ▪), numbered lists, headings, **bold**, *italic*.
+Use **Copy** (keeps the Markdown, so it pastes formatted into Notion) or **Replace Selection**. Esc closes the panel.
+
+The ✨ button appears after a drag-select, a double/triple-click, or a keyboard selection (⇧ + arrows, ⌘A).
+It hides on the next click, keypress, scroll, or after 4 seconds. Your clipboard is only touched when you use it, and is restored afterwards.
+
+## Settings
+
+Menu bar icon → **Settings…** (the menu has just Settings and Quit):
+
+- **Provider and API key**: Gemini (free tier is enough; key from aistudio.google.com/apikey) or OpenAI (platform.openai.com/api-keys).
+- **Model**: your account's live model list, marked ⚡ fastest/cheapest, ⭐ balanced, 🧠 smartest, ❔ new name, unrated.
+  Markers are guessed from model names. ⚡ models such as `gpt-6-luna` or `gemini-flash-lite-latest` are plenty for proofreading.
+- **Show ✨ button when text is selected**: on by default.
+- **Start at login**: on by default.
+
+## Build and install
 
 Requires macOS 14+ and the Xcode command-line tools.
 
@@ -22,14 +43,27 @@ cd mac-proofread
 ./build.sh
 ```
 
-This builds, runs the self-test, signs, installs to `/Applications/Proofread.app`, and restarts the app.
+`build.sh` compiles, runs the self-test, generates the icon, signs, installs to `/Applications/Proofread.app`, and restarts the app.
 
 On first launch:
-1. Enter your API key in the Settings dialog (Gemini: aistudio.google.com/apikey).
-2. Grant Accessibility access: System Settings → Privacy & Security → Accessibility → enable Proofread. It is needed to send ⌘C/⌘V.
+1. Paste your API key in Settings and click Save.
+2. Grant Accessibility access when asked (System Settings → Privacy & Security → Accessibility → Proofread).
+   It is needed to read the selection and send ⌘C/⌘V.
+
+### Signing and permissions
 
 `build.sh` signs with the first code-signing identity in your keychain (override with `SIGN_IDENTITY=...`).
-That keeps the app's identity stable, so the Accessibility and Keychain grants survive rebuilds.
-With no identity it falls back to ad-hoc signing, and macOS asks again after every rebuild.
+A stable identity keeps the Accessibility grant across rebuilds. With no identity it falls back to ad-hoc signing,
+and Accessibility must be re-granted after every rebuild.
 
-Start at Login is on by default; turn it off in Settings (menu bar icon → Settings…).
+API keys for all providers are stored together in one Keychain item, "Proofread – API keys".
+With a self-signed identity, macOS asks once after each rebuild to let the new build read it; choose **Always Allow**.
+
+## Code
+
+| File | Contents |
+|---|---|
+| `main.swift` | App, panel, settings, AI requests, Keychain, self-test (`--selftest`) |
+| `SelectionWatcher.swift` | ✨ button, selection and editability detection via Accessibility |
+| `MarkdownView.swift` | Markdown rendering for results |
+| `make_icon.swift` | Draws the app icon at build time |
