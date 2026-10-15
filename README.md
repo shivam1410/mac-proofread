@@ -8,11 +8,15 @@ Turn it off from the menu bar icon → Show Edit Button on Selection. Your clipb
 - Type a custom instruction and press Return, or use the quick actions: Proofread ⌘1, Improve ⌘2, Shorter ⌘3, Longer ⌘4, Professional ⌘5, Casual ⌘6.
 - Esc closes the panel. ⌘Z in the target app undoes the replacement.
 - Works with Gemini (default, free tier is enough) or OpenAI. API keys are stored in the macOS Keychain.
-- Settings (menu bar icon) lists your account's models live, marked ⚡ fastest/cheapest, ⭐ balanced, 🧠 smartest.
+- Settings (menu bar icon) lists your account's models live, marked ⚡ fastest/cheapest, ⭐ balanced, 🧠 smartest, ❔ unrated new name.
 
 ## Build and run
 
+Requires macOS 14+ and the Xcode command-line tools.
+
 ```bash
+git clone https://github.com/shivam1410/mac-proofread.git
+cd mac-proofread
 ./build.sh
 ```
 
