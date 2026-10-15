@@ -34,7 +34,8 @@ enum Provider: String, CaseIterable, Identifiable {
 
 enum Tier: Int {
     case fast, balanced, smart, unknown
-    var icon: String { ["⚡", "⭐", "🧠", "❔"][rawValue] }
+    var symbol: String { ["bolt.fill", "star.fill", "brain", "questionmark.circle"][rawValue] }
+    var meaning: String { ["Fastest, cheapest", "Balanced, best for editing", "Smartest, slower", "New name, unrated"][rawValue] }
 }
 
 /// Capability guess from the model name. Providers don't publish tiers in their model lists,
@@ -324,7 +325,7 @@ struct PanelView: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             TextField("Ask about this", text: $model.custom)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
@@ -334,11 +335,10 @@ struct PanelView: View {
             // Buttons hug their labels; the leftover width goes between them, not inside them.
             HStack(spacing: 0) {
                 ForEach(Array(editActions.enumerated()), id: \.offset) { index, action in
-                    if index > 0 { Spacer(minLength: 4) }
+                    if index > 0 { Spacer(minLength: 6) }
                     Button(action.title) { model.run(action) }.fixedSize()
                 }
             }
-            .controlSize(.small)
             if model.busy {
                 HStack { ProgressView().controlSize(.small); Text("Working…").foregroundStyle(.secondary) }
             }
@@ -347,8 +347,8 @@ struct PanelView: View {
                 Text(error).foregroundStyle(.red).font(.caption).fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(8)
-        .frame(width: 300)
+        .padding(10)
+        .frame(width: 360)
         .disabled(model.busy)
         .onAppear { focused = true }
         .onExitCommand { model.close() }
@@ -382,15 +382,15 @@ struct PanelView: View {
 
 @MainActor final class SettingsModel: ObservableObject {
     @Published var provider = Settings.provider
-    @Published var key = ""
+    @Published var key = Keychain.get(Settings.provider.rawValue) ?? "" // shown masked; the eye reveals it
+    @Published var revealKey = false
     @Published var model = Settings.model
     @Published var models: [String] = []
     @Published var status = ""
 
-    var hasSavedKey: Bool { Keychain.get(provider.rawValue) != nil }
-
     func providerChanged() {
-        key = ""
+        key = Keychain.get(provider.rawValue) ?? ""
+        revealKey = false
         model = Settings.model(for: provider)
         Task { await loadModels() }
     }
@@ -445,7 +445,7 @@ struct PanelView: View {
 
     func save() -> Bool {
         let key = self.key.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !key.isEmpty {
+        if !key.isEmpty && key != Keychain.get(provider.rawValue) {
             do { try Keychain.set(key, for: provider.rawValue) } catch {
                 status = error.localizedDescription
                 return false
@@ -489,16 +489,13 @@ struct SettingsView: View {
                 }
                 GridRow {
                     Text("API key")
-                    SecureField("", text: $settings.key,
-                                prompt: Text(settings.hasSavedKey ? "✓ Key saved (hidden). Paste to replace" : "Paste API key"))
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { Task { await settings.loadModels() } }
+                    keyField
                 }
                 GridRow {
                     Text("Model")
                     HStack {
                         Picker("", selection: $settings.model) {
-                            ForEach(settings.models, id: \.self) { Text("\(tier(of: $0).icon)  \($0)").tag($0) }
+                            ForEach(settings.models, id: \.self) { Label($0, systemImage: tier(of: $0).symbol).tag($0) }
                         }
                         .labelsHidden()
                         Button("Refresh") { Task { await settings.loadModels() } }
@@ -511,21 +508,48 @@ struct SettingsView: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 8) {
-                Toggle("Show ✨ button when text is selected",
-                       isOn: Binding(get: { settings.showButton }, set: { settings.setShowButton($0) }))
+                Toggle(isOn: Binding(get: { settings.showButton }, set: { settings.setShowButton($0) })) {
+                    HStack(spacing: 4) {
+                        Text("Show")
+                        Image(systemName: "sparkles")
+                        Text("button when text is selected")
+                    }
+                }
                 Toggle("Start at login",
                        isOn: Binding(get: { settings.startAtLogin }, set: { settings.setStartAtLogin($0) }))
             }
             Divider()
             VStack(alignment: .leading, spacing: 4) {
-                Text("Select text, then click ✨ or press ⌃⌥E.")
-                Text("⚡ Fastest, cheapest   ⭐ Balanced, best for editing   🧠 Smartest, slower   ❔ New name, unrated")
-                Text("Get a key at \(settings.provider.keyURL). Keys are stored in your macOS Keychain.")
+                ForEach([Tier.fast, .balanced, .smart, .unknown], id: \.self) { tier in
+                    Label(tier.meaning, systemImage: tier.symbol)
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
         }
         .padding(20)
+    }
+
+    /// Masked key with an eye button inside the field to show or hide it.
+    private var keyField: some View {
+        let prompt = Text("Paste key from \(settings.provider.keyURL)")
+        return Group {
+            if settings.revealKey {
+                TextField("", text: $settings.key, prompt: prompt)
+            } else {
+                SecureField("", text: $settings.key, prompt: prompt)
+            }
+        }
+        .textFieldStyle(.roundedBorder)
+        .onSubmit { Task { await settings.loadModels() } }
+        .overlay(alignment: .trailing) {
+            Button { settings.revealKey.toggle() } label: {
+                Image(systemName: settings.revealKey ? "eye.slash" : "eye").foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 6)
+            .help(settings.revealKey ? "Hide key" : "Show key")
+        }
     }
 }
 
