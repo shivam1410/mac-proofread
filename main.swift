@@ -472,6 +472,7 @@ struct SettingsView: View {
             .padding([.horizontal, .bottom], 20)
         }
         .frame(width: 480)
+        .background(BlurBackground().ignoresSafeArea())
         .onChange(of: settings.provider) { settings.providerChanged() }
         .task { await settings.loadModels() }
     }
@@ -530,27 +531,43 @@ struct SettingsView: View {
         .padding(20)
     }
 
-    /// Masked key with an eye button inside the field to show or hide it.
+    /// Masked key with an eye button inside the field's border, in its own space so it never covers the text.
     private var keyField: some View {
         let prompt = Text("Paste key from \(settings.provider.keyURL)")
-        return Group {
-            if settings.revealKey {
-                TextField("", text: $settings.key, prompt: prompt)
-            } else {
-                SecureField("", text: $settings.key, prompt: prompt)
+        return HStack(spacing: 6) {
+            Group {
+                if settings.revealKey {
+                    TextField("", text: $settings.key, prompt: prompt)
+                } else {
+                    SecureField("", text: $settings.key, prompt: prompt)
+                }
             }
-        }
-        .textFieldStyle(.roundedBorder)
-        .onSubmit { Task { await settings.loadModels() } }
-        .overlay(alignment: .trailing) {
+            .textFieldStyle(.plain)
+            .onSubmit { Task { await settings.loadModels() } }
             Button { settings.revealKey.toggle() } label: {
                 Image(systemName: settings.revealKey ? "eye.slash" : "eye").foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 6)
             .help(settings.revealKey ? "Hide key" : "Show key")
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color(nsColor: .textBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(nsColor: .separatorColor)))
     }
+}
+
+/// Behind-window blur for the settings window.
+struct BlurBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .hudWindow
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 // MARK: - App
@@ -770,7 +787,11 @@ var hotKeyHandler: (() -> Void)?
             self?.settingsWindow?.close()
         })))
         window.title = "Proofread Settings"
-        window.styleMask = [.titled, .closable]
+        window.styleMask = [.titled, .closable, .fullSizeContentView]
+        // Translucent like the edit panel: the SwiftUI view draws a blur behind itself.
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()
