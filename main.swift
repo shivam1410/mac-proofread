@@ -440,7 +440,7 @@ var hotKeyHandler: (() -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "text.badge.checkmark", accessibilityDescription: "SelectEdit")
+        statusItem.button?.image = NSImage(systemSymbolName: "wand.and.sparkles", accessibilityDescription: "SelectEdit")
         let menu = NSMenu()
         menu.addItem(withTitle: "Select text, then click ✨ Edit or press ⌃⌥E", action: nil, keyEquivalent: "")
         menu.addItem(.separator())
