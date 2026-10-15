@@ -324,20 +324,21 @@ struct PanelView: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             TextField("Ask about this", text: $model.custom)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit {
                     if !model.custom.isEmpty { model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true)) }
                 }
-            HStack(spacing: 6) {
-                ForEach(editActions, id: \.title) { action in
-                    Button { model.run(action) } label: {
-                        Text(action.title).lineLimit(1).frame(maxWidth: .infinity)
-                    }
+            // Buttons hug their labels; the leftover width goes between them, not inside them.
+            HStack(spacing: 0) {
+                ForEach(Array(editActions.enumerated()), id: \.offset) { index, action in
+                    if index > 0 { Spacer(minLength: 4) }
+                    Button(action.title) { model.run(action) }.fixedSize()
                 }
             }
+            .controlSize(.small)
             if model.busy {
                 HStack { ProgressView().controlSize(.small); Text("Working…").foregroundStyle(.secondary) }
             }
@@ -346,8 +347,8 @@ struct PanelView: View {
                 Text(error).foregroundStyle(.red).font(.caption).fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(14)
-        .frame(width: 400)
+        .padding(8)
+        .frame(width: 300)
         .disabled(model.busy)
         .onAppear { focused = true }
         .onExitCommand { model.close() }
