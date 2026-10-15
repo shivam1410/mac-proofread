@@ -114,20 +114,18 @@ enum Settings {
 enum Keychain {
     private static let service = "Proofread"
     private static let account = "api-keys" // value: JSON object, provider name -> key
-    // Earlier versions kept one item per provider, under these service names; migrated on first use.
-    private static let legacyServices = ["Proofread", "SelectEdit"]
 
     private static var cache: [String: String]?
     private static let lock = NSLock()
 
-    private static func query(service: String, account: String) -> [String: Any] {
+    private static func query() -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
          kSecAttrAccount as String: account]
     }
 
-    private static func read(service: String, account: String) -> Data? {
-        var q = query(service: service, account: account)
+    private static func read() -> Data? {
+        var q = query()
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
@@ -138,20 +136,7 @@ enum Keychain {
     static func get(_ provider: String) -> String? {
         lock.lock()
         defer { lock.unlock() }
-        var keys = loadAll()
-        if let key = keys[provider] { return key }
-        guard let legacy = legacyServices.lazy.compactMap({ read(service: $0, account: provider) }).first,
-              let key = String(data: legacy, encoding: .utf8) else { return nil }
-        keys[provider] = key
-        do {
-            try storeAll(keys)
-            for legacyService in legacyServices {
-                SecItemDelete(query(service: legacyService, account: provider) as CFDictionary)
-            }
-        } catch {
-            NSLog("Proofread: keeping legacy Keychain item: %@", error.localizedDescription)
-        }
-        return key
+        return loadAll()[provider]
     }
 
     static func set(_ key: String, for provider: String) throws {
@@ -165,7 +150,7 @@ enum Keychain {
     /// Reads the shared item once per run; later calls use the in-memory copy.
     private static func loadAll() -> [String: String] {
         if let cache { return cache }
-        let keys = read(service: service, account: account)
+        let keys = read()
             .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
         cache = keys
         return keys
@@ -173,7 +158,7 @@ enum Keychain {
 
     private static func storeAll(_ keys: [String: String]) throws {
         let data = try JSONEncoder().encode(keys)
-        let q = query(service: service, account: account)
+        let q = query()
         var status = SecItemUpdate(q as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
             var add = q
@@ -593,7 +578,7 @@ var hotKeyHandler: (() -> Void)?
 
     /// Start at login was the setup default before this toggle existed, so turn it on once.
     private func enableLoginOnFirstRun() {
-        let key = "startAtLoginInitialized.proofread" // re-register after the rename moved the app
+        let key = "startAtLoginInitialized.proofread"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
         UserDefaults.standard.set(true, forKey: key)
         do { try SMAppService.mainApp.register() } catch {

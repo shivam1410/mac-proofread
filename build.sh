@@ -46,8 +46,6 @@ echo "Built $APP"
 # Install over the copy that Login Items launches, then restart it.
 INSTALLED=/Applications/Proofread.app
 pkill -x Proofread || true
-pkill -x Wand || true
-pkill -x SelectEdit || true # earlier app names
 rm -rf "$INSTALLED"
 ditto "$APP" "$INSTALLED"
 open "$INSTALLED"
