@@ -472,7 +472,6 @@ struct SettingsView: View {
             .padding([.horizontal, .bottom], 20)
         }
         .frame(width: 480)
-        .background(BlurBackground().ignoresSafeArea())
         .onChange(of: settings.provider) { settings.providerChanged() }
         .task { await settings.loadModels() }
     }
@@ -559,19 +558,6 @@ struct SettingsView: View {
         .background(Color(nsColor: .textBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color(nsColor: .separatorColor)))
     }
-}
-
-/// Behind-window blur for the settings window.
-struct BlurBackground: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .hudWindow
-        view.blendingMode = .behindWindow
-        view.state = .active
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 // MARK: - App
@@ -787,15 +773,30 @@ var hotKeyHandler: (() -> Void)?
             window.makeKeyAndOrderFront(nil)
             return
         }
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(close: { [weak self] in
+        let host = NSHostingView(rootView: SettingsView(close: { [weak self] in
             self?.settingsWindow?.close()
-        })))
+        }))
+        let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView],
+                              backing: .buffered, defer: false)
         window.title = "Proofread Settings"
-        window.styleMask = [.titled, .closable, .fullSizeContentView]
-        // Translucent like the edit panel: the SwiftUI view draws a blur behind itself.
+        // Translucent like the edit panel: one blur behind the whole window, title bar included.
         window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         window.isOpaque = false
         window.backgroundColor = .clear
+        let blur = NSVisualEffectView()
+        blur.material = .hudWindow
+        blur.blendingMode = .behindWindow
+        blur.state = .active
+        window.contentView = blur
+        host.translatesAutoresizingMaskIntoConstraints = false
+        blur.addSubview(host)
+        NSLayoutConstraint.activate([
+            host.topAnchor.constraint(equalTo: blur.safeAreaLayoutGuide.topAnchor), // below the title bar
+            host.leadingAnchor.constraint(equalTo: blur.leadingAnchor),
+            host.trailingAnchor.constraint(equalTo: blur.trailingAnchor),
+            host.bottomAnchor.constraint(equalTo: blur.bottomAnchor),
+        ])
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()
