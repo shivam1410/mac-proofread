@@ -1,33 +1,61 @@
-// Shows a small "Edit" button next to the cursor after the user selects text in another app.
+// Shows a small ✨ button next to the cursor after the user selects text in another app.
 import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
 enum AXSelection { case text, empty, unknown }
 
-/// Asks the focused app for its selected text without touching the clipboard.
-/// Many Electron apps (Notion, Slack) don't answer, which gives `.unknown`.
-func axSelection() -> AXSelection {
+/// Electron/Chromium apps (Notion, Slack, Claude) only build their accessibility tree for
+/// assistive tools; this flag asks them to, so selection and editability become readable.
+func enableAppAccessibility() {
+    guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
+    let app = AXUIElementCreateApplication(pid)
+    AXUIElementSetMessagingTimeout(app, 0.2)
+    _ = AXUIElementSetAttributeValue(app, "AXManualAccessibility" as CFString, kCFBooleanTrue) // non-Electron apps reject it; fine
+}
+
+func focusedElement() -> AXUIElement? {
+    enableAppAccessibility()
     let system = AXUIElementCreateSystemWide()
     AXUIElementSetMessagingTimeout(system, 0.2) // don't stall on a hung app
     var focused: CFTypeRef?
     guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
-          let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return .unknown }
+          let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return nil }
+    return (focused as! AXUIElement) // swiftlint:disable:this force_cast
+}
+
+/// Asks the focused app for its selected text without touching the clipboard.
+func axSelection() -> AXSelection {
+    guard let element = focusedElement() else { return .unknown }
     var value: CFTypeRef?
-    // swiftlint:disable:next force_cast
-    guard AXUIElementCopyAttributeValue(focused as! AXUIElement, kAXSelectedTextAttribute as CFString, &value) == .success,
+    guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &value) == .success,
           let text = value as? String else { return .unknown }
     return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .empty : .text
 }
 
+/// Text fields count when their value is writable; web/Electron content when it sits inside a contenteditable.
+func isEditable(role: String?, valueSettable: Bool, hasEditableAncestor: Bool) -> Bool {
+    let fieldRoles = ["AXTextField", "AXTextArea", "AXComboBox", "AXSearchField"]
+    return hasEditableAncestor || (fieldRoles.contains(role ?? "") && valueSettable)
+}
+
+/// Whether pasting would land in an editable field. Unknown counts as not editable,
+/// so results are shown instead of pasted into nowhere.
+func focusedTextIsEditable() -> Bool {
+    guard let element = focusedElement() else { return false }
+    var role: CFTypeRef?
+    _ = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+    var settable = DarwinBoolean(false)
+    _ = AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable)
+    var ancestor: CFTypeRef?
+    let hasAncestor = AXUIElementCopyAttributeValue(element, "AXEditableAncestor" as CFString, &ancestor) == .success
+        && ancestor != nil
+    return isEditable(role: role as? String, valueSettable: settable.boolValue, hasEditableAncestor: hasAncestor)
+}
+
 /// Screen point (Cocoa coordinates) at the top-right of the selection, when the app exposes it.
 func axSelectionAnchor() -> NSPoint? {
-    let system = AXUIElementCreateSystemWide()
-    AXUIElementSetMessagingTimeout(system, 0.2)
-    var focused: CFTypeRef?
-    guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
-          let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return nil }
-    let element = focused as! AXUIElement // swiftlint:disable:this force_cast
+    guard let element = focusedElement() else { return nil }
     var range: CFTypeRef?
     var bounds: CFTypeRef?
     guard AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &range) == .success,
@@ -65,14 +93,17 @@ struct SelectionButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label("Edit", systemImage: "sparkles")
-                .font(.system(size: 12, weight: .medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Color(white: 0.28).opacity(0.92), in: Circle()) // neutral grey, readable on light and dark
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
+                .padding(4) // room for the shadow inside the panel
         }
         .buttonStyle(.plain)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(.separator))
+        .help("Edit or summarize with AI")
+        .accessibilityLabel("Edit or summarize with AI")
     }
 }
 
@@ -135,7 +166,7 @@ struct SelectionButton: View {
         let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        panel.hasShadow = false // the button draws its own shadow
         panel.level = .popUpMenu
         panel.becomesKeyOnlyIfNeeded = true
         let host = FirstMouseHostingView(rootView: SelectionButton { [weak self] in

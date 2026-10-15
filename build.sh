@@ -7,7 +7,7 @@ APP=build/Proofread.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
-swiftc -O main.swift SelectionWatcher.swift -o "$APP/Contents/MacOS/Proofread"
+swiftc -O main.swift SelectionWatcher.swift MarkdownView.swift -o "$APP/Contents/MacOS/Proofread"
 "$APP/Contents/MacOS/Proofread" --selftest
 
 # App icon: render once at 1024px, downscale into an iconset, pack as .icns.
