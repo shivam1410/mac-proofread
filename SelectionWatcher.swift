@@ -133,6 +133,11 @@ struct SelectionButton: View {
     }
 
     private func handle(_ event: NSEvent) {
+        // Selections inside Proofread's own windows (e.g. the API key field) never get the button.
+        if NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+            hide()
+            return
+        }
         switch event.type {
         case .leftMouseDown:
             mouseDownAt = NSEvent.mouseLocation
