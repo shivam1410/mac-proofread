@@ -8,11 +8,11 @@ Bring your own Gemini or OpenAI API key.
 Select text, then click the **✨** button that appears next to it, or press **⌃⌥E**. A panel opens with:
 
 - **A prompt box.** Type any instruction and press Return.
-- **Quick actions:** Proofread ⌘1, Improve ⌘2, Shorter ⌘3, Longer ⌘4, Professional ⌘5, Casual ⌘6, Summarize ⌘7.
+- **Quick actions:** Proofread, Shorten, Professional, Summarise.
 
 What happens to the result depends on where the text is:
 
-| Selection | Edits (Proofread, Improve, typed instructions…) | Summarize |
+| Selection | Edits (Proofread, Shorten, Professional, typed instructions) | Summarise |
 |---|---|---|
 | Editable text (Notion page, text field) | Replace the selection. ⌘Z in the app undoes it. | Shown in the panel |
 | Read-only text (chat, web page) | Shown in the panel. Typed prompts are answered as questions, e.g. "who said what?" | Shown in the panel |

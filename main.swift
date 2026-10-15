@@ -79,12 +79,9 @@ struct EditAction {
 
 let editActions = [
     EditAction(title: "Proofread", instruction: "Fix spelling, grammar, and punctuation mistakes. Do not change anything else."),
-    EditAction(title: "Improve", instruction: "Improve clarity and flow. Keep the meaning, tone, and length roughly the same."),
-    EditAction(title: "Shorter", instruction: "Make it more concise while keeping the key points."),
-    EditAction(title: "Longer", instruction: "Expand it with a bit more detail, keeping the same tone."),
+    EditAction(title: "Shorten", instruction: "Make it more concise while keeping the key points."),
     EditAction(title: "Professional", instruction: "Rewrite it in a clear, professional tone."),
-    EditAction(title: "Casual", instruction: "Rewrite it in a friendly, casual tone."),
-    EditAction(title: "Summarize",
+    EditAction(title: "Summarise",
                instruction: "Summarize it concisely in the same language. Use a few short bullet points starting with • for longer text, or one or two sentences for short text.",
                showsResult: true),
 ]
@@ -328,28 +325,18 @@ struct PanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField(model.editable ? "Edit with AI… then press Return" : "Ask about this text… then press Return",
-                      text: $model.custom)
+            TextField("Ask about this", text: $model.custom)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit {
                     if !model.custom.isEmpty { model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true)) }
                 }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
-                ForEach(Array(editActions.enumerated()), id: \.offset) { index, action in
+            HStack(spacing: 6) {
+                ForEach(editActions, id: \.title) { action in
                     Button { model.run(action) } label: {
-                        HStack {
-                            Text(action.title)
-                            Spacer()
-                            Text("⌘\(index + 1)").foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
+                        Text(action.title).lineLimit(1).frame(maxWidth: .infinity)
                     }
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
                 }
-            }
-            if !model.editable {
-                Text("Read-only text: results show here.").font(.caption).foregroundStyle(.secondary)
             }
             if model.busy {
                 HStack { ProgressView().controlSize(.small); Text("Working…").foregroundStyle(.secondary) }
@@ -360,7 +347,7 @@ struct PanelView: View {
             }
         }
         .padding(14)
-        .frame(width: 360)
+        .frame(width: 400)
         .disabled(model.busy)
         .onAppear { focused = true }
         .onExitCommand { model.close() }
