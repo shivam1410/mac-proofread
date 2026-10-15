@@ -24,12 +24,16 @@ func focusedElement() -> AXUIElement? {
     return (focused as! AXUIElement) // swiftlint:disable:this force_cast
 }
 
-/// Asks the focused app for its selected text without touching the clipboard.
-func axSelection() -> AXSelection {
-    guard let element = focusedElement() else { return .unknown }
+/// The focused app's selected text, read without touching the clipboard; nil when the app doesn't say.
+func axSelectedText() -> String? {
+    guard let element = focusedElement() else { return nil }
     var value: CFTypeRef?
-    guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &value) == .success,
-          let text = value as? String else { return .unknown }
+    guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &value) == .success else { return nil }
+    return value as? String
+}
+
+func axSelection() -> AXSelection {
+    guard let text = axSelectedText() else { return .unknown }
     return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .empty : .text
 }
 
@@ -78,9 +82,12 @@ func isSelectionKey(keyCode: Int, flags: NSEvent.ModifierFlags) -> Bool {
     return keyCode == kVK_ANSI_A && flags.contains(.command) && !flags.contains(.shift)
 }
 
-/// A drag or double/triple click may have selected text; skip only when the app says nothing is selected.
-func shouldOfferButton(dragDistance: CGFloat, clickCount: Int, selection: AXSelection) -> Bool {
-    (dragDistance > 6 || clickCount >= 2) && selection != .empty
+/// A drag or double/triple click counts only when it left a new, non-empty selection. Dragging a
+/// window, tab or scrollbar leaves the selection unreadable or unchanged, so it gets no button.
+func shouldOfferButton(dragDistance: CGFloat, clickCount: Int, before: String?, after: String?) -> Bool {
+    guard dragDistance > 6 || clickCount >= 2,
+          let after, !after.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+    return after != before
 }
 
 final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
@@ -119,6 +126,7 @@ struct SelectionButton: View {
     var isSuppressed: () -> Bool = { false }
     private let onPick: () -> Void
     private var mouseDownAt = NSPoint.zero
+    private var selectionAtPress: String?
     private var button: NSPanel?
     private var hideTask: Task<Void, Never>?
     private var keySelectTask: Task<Void, Never>?
@@ -141,15 +149,18 @@ struct SelectionButton: View {
         switch event.type {
         case .leftMouseDown:
             mouseDownAt = NSEvent.mouseLocation
+            // Only the first click of a double-click: by the second, the app may already have selected the word.
+            if event.clickCount <= 1 { selectionAtPress = axSelectedText() }
             hide()
         case .leftMouseUp:
             let up = NSEvent.mouseLocation
             let distance = hypot(up.x - mouseDownAt.x, up.y - mouseDownAt.y)
             let clicks = event.clickCount
+            let before = selectionAtPress
             guard Self.isEnabled, !isSuppressed(), distance > 6 || clicks >= 2 else { return }
             Task {
                 await sleepMs(60) // let the app finish updating its selection
-                if shouldOfferButton(dragDistance: distance, clickCount: clicks, selection: axSelection()) { show(at: up) }
+                if shouldOfferButton(dragDistance: distance, clickCount: clicks, before: before, after: axSelectedText()) { show(at: up) }
             }
         case .keyDown where isSelectionKey(keyCode: Int(event.keyCode), flags: event.modifierFlags):
             hide()

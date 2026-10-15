@@ -867,10 +867,12 @@ func selfTest() {
         "gpt-4o": .smart, "gpt-5-chat-latest": .smart, "gpt-4o-mini": .balanced, "gpt-7-nova": .unknown,
     ]
     for (model, tierValue) in expected { precondition(tier(of: model) == tierValue, model) }
-    precondition(shouldOfferButton(dragDistance: 40, clickCount: 1, selection: .unknown))
-    precondition(shouldOfferButton(dragDistance: 0, clickCount: 2, selection: .text))
-    precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, selection: .empty)) // e.g. dragged a window
-    precondition(!shouldOfferButton(dragDistance: 2, clickCount: 1, selection: .unknown)) // plain click
+    precondition(shouldOfferButton(dragDistance: 40, clickCount: 1, before: "", after: "hello"))
+    precondition(shouldOfferButton(dragDistance: 0, clickCount: 2, before: nil, after: "word"))
+    precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: "", after: "")) // e.g. dragged a window
+    precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: nil, after: nil)) // dragged a tab, app says nothing
+    precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: "old", after: "old")) // moved window, stale selection
+    precondition(!shouldOfferButton(dragDistance: 2, clickCount: 1, before: "", after: "hello")) // plain click
     precondition(isSelectionKey(keyCode: kVK_RightArrow, flags: [.shift, .command]))
     precondition(isSelectionKey(keyCode: kVK_ANSI_A, flags: .command))
     precondition(!isSelectionKey(keyCode: kVK_RightArrow, flags: .command)) // move, not select
