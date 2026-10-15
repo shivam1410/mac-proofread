@@ -95,7 +95,6 @@ struct SelectionButton: View {
 
     /// Lives for the whole app run, so the monitor is never removed.
     func start() {
-        NSLog("SelectEdit: watcher start, accessibility trusted=%d", AXIsProcessTrusted() ? 1 : 0)
         _ = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .keyDown, .scrollWheel]) { [weak self] event in
             MainActor.assumeIsolated { self?.handle(event) }
         }
@@ -113,10 +112,7 @@ struct SelectionButton: View {
             guard Self.isEnabled, !isSuppressed(), distance > 6 || clicks >= 2 else { return }
             Task {
                 await sleepMs(60) // let the app finish updating its selection
-                let selection = axSelection()
-                NSLog("SelectEdit: mouseUp distance=%.0f clicks=%d selection=%@ app=%@", distance, clicks,
-                      "\(selection)", NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")
-                if shouldOfferButton(dragDistance: distance, clickCount: clicks, selection: selection) { show(at: up) }
+                if shouldOfferButton(dragDistance: distance, clickCount: clicks, selection: axSelection()) { show(at: up) }
             }
         case .keyDown where isSelectionKey(keyCode: Int(event.keyCode), flags: event.modifierFlags):
             hide()
@@ -126,9 +122,7 @@ struct SelectionButton: View {
             keySelectTask = Task { [weak self] in
                 await sleepMs(400)
                 guard !Task.isCancelled, let self, !self.isSuppressed() else { return }
-                let selection = axSelection()
-                NSLog("SelectEdit: key selection=%@", "\(selection)")
-                if selection != .empty { self.show(at: axSelectionAnchor() ?? NSEvent.mouseLocation) }
+                if axSelection() != .empty { self.show(at: axSelectionAnchor() ?? NSEvent.mouseLocation) }
             }
         default:
             keySelectTask?.cancel()
