@@ -97,7 +97,8 @@ struct SelectionButton: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
-                .background(Color(white: 0.28).opacity(0.92), in: Circle()) // neutral grey, readable on light and dark
+                .background(Color(white: 0.08), in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.22), lineWidth: 1)) // keeps the edge visible on dark apps
                 .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
                 .padding(4) // room for the shadow inside the panel
         }
