@@ -21,6 +21,8 @@ Results shown in the panel are formatted Markdown: nested bullets (● ○ ▪),
 Use **Copy** (keeps the Markdown, so it pastes formatted into Notion) or **Replace Selection**. Esc closes the panel.
 
 The ✨ button appears after a drag-select, a double/triple-click, or a keyboard selection (⇧ + arrows, ⌘A).
+A drag or double-click counts only if it leaves a new selection, so moving a window, dragging a tab, or scrolling doesn't show it.
+In apps that don't report their selection to Accessibility, use ⌃⌥E instead.
 It hides on the next click, keypress, scroll, or after 4 seconds. Your clipboard is only touched when you use it, and is restored afterwards.
 
 ## Settings
