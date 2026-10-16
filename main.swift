@@ -1,4 +1,4 @@
-// Proofread: select text anywhere, press ⌃⌥E, pick an edit, and the AI result replaces the selection.
+// Proofread: select text anywhere, press ⌘⌥P, pick an edit, and the AI result replaces the selection.
 import AppKit
 import Carbon.HIToolbox
 import Security
@@ -550,7 +550,7 @@ struct SettingsView: View {
                         Text("button when text is selected")
                     }
                 }
-                Text("⌃⌥E opens the panel either way.")
+                Text("⌘⌥P opens the panel either way.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.leading, 20) // line up with the toggle's label
@@ -656,10 +656,10 @@ var hotKeyHandler: (() -> Void)?
             return noErr
         }, 1, &spec, nil, nil)
         var ref: EventHotKeyRef?
-        let status = RegisterEventHotKey(UInt32(kVK_ANSI_E), UInt32(controlKey | optionKey),
+        let status = RegisterEventHotKey(UInt32(kVK_ANSI_P), UInt32(cmdKey | optionKey),
                                          EventHotKeyID(signature: 0x5345_4C45, id: 1), // "SELE"
                                          GetApplicationEventTarget(), 0, &ref)
-        if status != noErr { showAlert("Hotkey unavailable", "Could not register ⌃⌥E (error \(status)). Another app may own it.") }
+        if status != noErr { showAlert("Hotkey unavailable", "Could not register ⌘⌥P (error \(status)). Another app may own it.") }
     }
 
     @objc func statusItemClicked() {

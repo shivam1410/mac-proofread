@@ -5,7 +5,7 @@ Bring your own Gemini or OpenAI API key.
 
 ## How it works
 
-Select text, then click the **✨** button that appears next to it, press **⌃⌥E**, or click the menu bar icon. A panel opens with:
+Select text, then click the **✨** button that appears next to it, press **⌘⌥P**, or click the menu bar icon. A panel opens with:
 
 - **A prompt box.** Type any instruction and press Return.
 - **Quick actions:** Proofread, Shorten, Formal, Summarise.
@@ -24,7 +24,7 @@ Edit the prompt first and Return asks again instead. Esc closes the panel.
 
 The ✨ button appears after a drag-select, a double/triple-click, or a keyboard selection (⇧ + arrows, ⌘A).
 A drag or double-click counts only if it leaves a new selection, so moving a window, dragging a tab, or scrolling doesn't show it.
-In apps that don't report their selection to Accessibility, use ⌃⌥E instead.
+In apps that don't report their selection to Accessibility, use ⌘⌥P instead.
 It hides on the next click, keypress, scroll, or after 4 seconds. Your clipboard is only touched when you use it, and is restored afterwards.
 
 ## Settings
