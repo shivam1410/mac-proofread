@@ -74,6 +74,12 @@ func axSelectionAnchor() -> NSPoint? {
     return NSPoint(x: rect.maxX, y: primaryHeight - rect.minY)
 }
 
+/// Icon clicks open the menu on right/⌃-click, without Accessibility, or when the app reports an empty
+/// selection. Otherwise they try to edit; apps like Google Sheets report nothing, so ⌘C decides.
+func iconClickOpensMenu(rightClick: Bool, control: Bool, trusted: Bool, selection: AXSelection) -> Bool {
+    rightClick || control || !trusted || selection == .empty
+}
+
 /// Keys that extend a text selection: ⇧ + arrows/Home/End/Page Up/Down, or ⌘A.
 func isSelectionKey(keyCode: Int, flags: NSEvent.ModifierFlags) -> Bool {
     let extendKeys = [kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow,

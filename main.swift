@@ -601,6 +601,7 @@ var hotKeyHandler: (() -> Void)?
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
+    private let menu = NSMenu()
     private var panel: NSPanel?
     private var panelModel: PanelModel?
     private var targetApp: NSRunningApplication?
@@ -611,19 +612,15 @@ var hotKeyHandler: (() -> Void)?
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "wand.and.sparkles", accessibilityDescription: "Proofread")
         enableLoginOnFirstRun()
-        let menu = NSMenu()
-        // Same as ⌃⌥E: the menu doesn't take focus, so the other app's selection is still there.
-        let editItem = menu.addItem(withTitle: "Edit Selection", action: #selector(triggerFromMenu), keyEquivalent: "e")
-        editItem.keyEquivalentModifierMask = [.control, .option]
-        editItem.target = self
-        editItem.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
-        menu.addItem(.separator())
         let settingsItem = menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         let quitItem = menu.addItem(withTitle: "Quit Proofread", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quitItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
-        statusItem.menu = menu
+        // Clicking the icon edits the selection; the menu opens only when there's nothing to edit.
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusItemClicked)
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         installEditMenu()
 
         hotKeyHandler = { [weak self] in self?.trigger() }
@@ -665,9 +662,25 @@ var hotKeyHandler: (() -> Void)?
         if status != noErr { showAlert("Hotkey unavailable", "Could not register ⌃⌥E (error \(status)). Another app may own it.") }
     }
 
-    @objc func triggerFromMenu() { trigger() }
+    @objc func statusItemClicked() {
+        let event = NSApp.currentEvent
+        // The icon click doesn't take focus, so the other app's selection is still there.
+        if iconClickOpensMenu(rightClick: event?.type == .rightMouseUp,
+                              control: event?.modifierFlags.contains(.control) ?? false,
+                              trusted: AXIsProcessTrusted(), selection: axSelection()) {
+            showMenu()
+        } else {
+            trigger(ifNothingSelected: { [weak self] in self?.showMenu() })
+        }
+    }
 
-    func trigger() {
+    private func showMenu() {
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil // so the next click comes back to statusItemClicked
+    }
+
+    func trigger(ifNothingSelected: @escaping () -> Void = { NSSound.beep() }) {
         guard panel == nil else { return }
         guard AXIsProcessTrusted() else {
             showAlert("Accessibility access needed",
@@ -684,7 +697,7 @@ var hotKeyHandler: (() -> Void)?
             let text = await copySelection()
             restore(pb, saved)
             guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                NSSound.beep() // nothing selected
+                ifNothingSelected()
                 return
             }
             showPanel(for: text, editable: editable)
@@ -917,6 +930,12 @@ func selfTest() {
     precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: nil, after: nil)) // dragged a tab, app says nothing
     precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: "old", after: "old")) // moved window, stale selection
     precondition(!shouldOfferButton(dragDistance: 2, clickCount: 1, before: "", after: "hello")) // plain click
+    precondition(!iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .text))
+    precondition(!iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .unknown)) // Sheets: try ⌘C
+    precondition(iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .empty))
+    precondition(iconClickOpensMenu(rightClick: true, control: false, trusted: true, selection: .text))
+    precondition(iconClickOpensMenu(rightClick: false, control: true, trusted: true, selection: .text))
+    precondition(iconClickOpensMenu(rightClick: false, control: false, trusted: false, selection: .text)) // Settings stays reachable
     precondition(isSelectionKey(keyCode: kVK_RightArrow, flags: [.shift, .command]))
     precondition(isSelectionKey(keyCode: kVK_ANSI_A, flags: .command))
     precondition(!isSelectionKey(keyCode: kVK_RightArrow, flags: .command)) // move, not select

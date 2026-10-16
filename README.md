@@ -5,7 +5,7 @@ Bring your own Gemini or OpenAI API key.
 
 ## How it works
 
-Select text, then click the **✨** button that appears next to it, press **⌃⌥E**, or choose **Edit Selection** from the menu bar icon. A panel opens with:
+Select text, then click the **✨** button that appears next to it, press **⌃⌥E**, or click the menu bar icon. A panel opens with:
 
 - **A prompt box.** Type any instruction and press Return.
 - **Quick actions:** Proofread, Shorten, Formal, Summarise.
@@ -29,7 +29,7 @@ It hides on the next click, keypress, scroll, or after 4 seconds. Your clipboard
 
 ## Settings
 
-Menu bar icon → **Settings…** (the menu has Edit Selection, Settings and Quit):
+Right-click the menu bar icon (or click it with nothing selected) → **Settings…** (the menu has just Settings and Quit):
 
 - **Provider and API key**: Gemini (free tier is enough; key from aistudio.google.com/apikey) or OpenAI (platform.openai.com/api-keys).
 - **Model**: your account's live model list, marked ⚡ fastest/cheapest, ⭐ balanced, 🧠 smartest, ❔ new name, unrated.
