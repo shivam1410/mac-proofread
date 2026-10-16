@@ -78,6 +78,16 @@ struct EditAction {
     var isCustom = false
 }
 
+/// Typed prompts are open-ended, so their result is previewed; quick actions on editable text replace it directly.
+func showsInPanel(_ action: EditAction, editable: Bool) -> Bool {
+    action.showsResult || action.isCustom || !editable
+}
+
+/// Return in the prompt box accepts the shown result, unless the prompt was edited since it ran (then it asks again).
+func returnAccepts(result: String?, prompt: String, ranPrompt: String) -> Bool {
+    result != nil && prompt == ranPrompt
+}
+
 let editActions = [
     EditAction(title: "Proofread", instruction: "Fix spelling, grammar, and punctuation mistakes. Do not change anything else."),
     EditAction(title: "Shorten", instruction: "Make it more concise while keeping the key points."),
@@ -313,6 +323,8 @@ final class KeyPanel: NSPanel {
     @Published var error: String?
     @Published var result: String?
     @Published var copied = false
+    /// The prompt box text when the shown result was requested.
+    var ranPrompt = ""
     /// False for read-only selections (chats, web pages): every result is shown, never pasted.
     var editable = true
     var run: (EditAction) -> Void = { _ in }
@@ -330,7 +342,12 @@ struct PanelView: View {
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit {
-                    if !model.custom.isEmpty { model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true)) }
+                    if let result = model.result,
+                       returnAccepts(result: result, prompt: model.custom, ranPrompt: model.ranPrompt) {
+                        accept(result)
+                    } else if !model.custom.isEmpty {
+                        model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true))
+                    }
                 }
             // Buttons hug their labels; the leftover width goes between them, not inside them.
             HStack(spacing: 0) {
@@ -364,16 +381,34 @@ struct PanelView: View {
             .frame(maxHeight: 320)
             .fixedSize(horizontal: false, vertical: true)
             HStack {
-                Button(model.copied ? "Copied" : "Copy") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
-                    model.copied = true
+                // The primary button is what Return does: Replace for editable text, Copy for read-only.
+                if model.editable {
+                    Button(model.copied ? "Copied" : "Copy") { copy(text) }
+                        .keyboardShortcut("c", modifiers: .command)
+                    Button("Replace Selection") { model.replace(text) }
+                        .buttonStyle(.borderedProminent)
+                        .help("Return")
+                } else {
+                    Button(model.copied ? "Copied" : "Copy") { copy(text) }
+                        .keyboardShortcut("c", modifiers: .command)
+                        .buttonStyle(.borderedProminent)
+                        .help("Return or ⌘C")
+                    Button("Replace Selection") { model.replace(text) }
                 }
-                Button("Replace Selection") { model.replace(text) }
                 Spacer()
                 Button("Close") { model.close() }
             }
         }
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        model.copied = true
+    }
+
+    private func accept(_ result: String) {
+        if model.editable { model.replace(result) } else { copy(result) }
     }
 
 }
@@ -663,11 +698,12 @@ var hotKeyHandler: (() -> Void)?
             model.error = nil
             model.result = nil
             model.copied = false
+            model.ranPrompt = model.custom
             Task {
                 do {
                     // Read-only selections can't be replaced, so show the result; typed prompts there
                     // are usually questions ("who said what?"), so answer them rather than rewrite.
-                    let shows = action.showsResult || !editable
+                    let shows = showsInPanel(action, editable: editable)
                     let answering = action.showsResult || (!editable && action.isCustom)
                     let result = try await runEdit(instruction: action.instruction, text: text, answering: answering)
                     // Drop the result if the panel was dismissed meanwhile; the user moved on.
@@ -881,6 +917,13 @@ func selfTest() {
     precondition(!isEditable(role: "AXTextArea", valueSettable: false, hasEditableAncestor: false)) // read-only text view
     precondition(isEditable(role: "AXGroup", valueSettable: false, hasEditableAncestor: true)) // contenteditable
     precondition(!isEditable(role: "AXWebArea", valueSettable: false, hasEditableAncestor: false)) // chat transcript
+    let typed = EditAction(title: "Custom", instruction: "q", isCustom: true)
+    precondition(showsInPanel(typed, editable: true)) // typed prompts preview, even in editable text
+    precondition(!showsInPanel(editActions[0], editable: true)) // Proofread replaces directly
+    precondition(showsInPanel(editActions[0], editable: false)) // read-only text can't be replaced
+    precondition(returnAccepts(result: "r", prompt: "q", ranPrompt: "q"))
+    precondition(!returnAccepts(result: "r", prompt: "q2", ranPrompt: "q")) // edited prompt asks again
+    precondition(!returnAccepts(result: nil, prompt: "q", ranPrompt: "q")) // nothing to accept yet
     precondition((requestBody(model: "m", instruction: "q", text: "t", answering: true)["messages"] as! [[String: String]])[0]["content"] == answerPrompt)
     let blocks = parseMarkdownBlocks("""
     ## Groceries

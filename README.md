@@ -12,13 +12,15 @@ Select text, then click the **✨** button that appears next to it, or press **�
 
 What happens to the result depends on where the text is:
 
-| Selection | Edits (Proofread, Shorten, Formal, typed instructions) | Summarise |
-|---|---|---|
-| Editable text (Notion page, text field) | Replace the selection. ⌘Z in the app undoes it. | Shown in the panel |
-| Read-only text (chat, web page) | Shown in the panel. Typed prompts are answered as questions, e.g. "who said what?" | Shown in the panel |
+| Selection | Proofread, Shorten, Formal | Typed prompts | Summarise |
+|---|---|---|---|
+| Editable text (Notion page, text field, Google Sheets range) | Replace the selection. ⌘Z in the app undoes it. | Previewed in the panel | Shown in the panel |
+| Read-only text (chat, web page) | Shown in the panel | Answered as questions, e.g. "who said what?" | Shown in the panel |
 
 Results shown in the panel are formatted Markdown: nested bullets (● ○ ▪), numbered lists, headings, **bold**, *italic*.
-Use **Copy** (keeps the Markdown, so it pastes formatted into Notion) or **Replace Selection**. Esc closes the panel.
+Use **Copy** (⌘C; keeps the Markdown, so it pastes formatted into Notion) or **Replace Selection**.
+Return does the highlighted one: Replace Selection for editable text, Copy for read-only text.
+Edit the prompt first and Return asks again instead. Esc closes the panel.
 
 The ✨ button appears after a drag-select, a double/triple-click, or a keyboard selection (⇧ + arrows, ⌘A).
 A drag or double-click counts only if it leaves a new selection, so moving a window, dragging a tab, or scrolling doesn't show it.
