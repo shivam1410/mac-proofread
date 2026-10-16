@@ -366,6 +366,9 @@ struct PanelView: View {
         }
         .padding(10)
         .frame(width: 360)
+        // Blur alone lets a white page (e.g. Google Sheets) wash the panel out; a mostly opaque tint keeps it legible.
+        // Drawn here, not as an extra NSView, because refit sizes the panel from the hosting view.
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.8), in: RoundedRectangle(cornerRadius: 12))
         .disabled(model.busy)
         .onAppear { focused = true }
         .onExitCommand { model.close() }
@@ -784,12 +787,6 @@ var hotKeyHandler: (() -> Void)?
         effect.layer?.cornerRadius = radius
         effect.layer?.borderWidth = 1
         effect.layer?.borderColor = NSColor.separatorColor.cgColor
-        // Blur alone lets a white page (e.g. Google Sheets) wash the panel out; a mostly opaque tint keeps it legible.
-        let tint = NSView(frame: effect.bounds)
-        tint.wantsLayer = true
-        tint.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.8).cgColor
-        tint.autoresizingMask = [.width, .height]
-        effect.addSubview(tint)
         content.frame = effect.bounds
         content.autoresizingMask = [.width, .height]
         effect.addSubview(content)
