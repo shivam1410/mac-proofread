@@ -88,12 +88,14 @@ func isSelectionKey(keyCode: Int, flags: NSEvent.ModifierFlags) -> Bool {
     return keyCode == kVK_ANSI_A && flags.contains(.command) && !flags.contains(.shift)
 }
 
-/// A drag or double/triple click counts only when it left a new, non-empty selection. Dragging a
-/// window, tab or scrollbar leaves the selection unreadable or unchanged, so it gets no button.
+/// A drag or double click counts only when it left a new, non-empty selection. Dragging a window,
+/// tab or scrollbar (or double-clicking a title bar) leaves the selection unreadable or unchanged.
+/// A triple click always counts: apps keep a selection on mouse-down, so re-selecting an already
+/// selected line looks unchanged, and nothing else on screen takes a triple click.
 func shouldOfferButton(dragDistance: CGFloat, clickCount: Int, before: String?, after: String?) -> Bool {
     guard dragDistance > 6 || clickCount >= 2,
           let after, !after.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-    return after != before
+    return clickCount >= 3 || after != before
 }
 
 final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
