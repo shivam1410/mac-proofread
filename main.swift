@@ -771,7 +771,7 @@ var hotKeyHandler: (() -> Void)?
     private func translucentBackground(wrapping content: NSView) -> NSView {
         let radius: CGFloat = 12
         let effect = NSVisualEffectView()
-        effect.material = .hudWindow
+        effect.material = .popover // follows light/dark mode
         effect.blendingMode = .behindWindow
         effect.state = .active
         // A stretchable rounded mask clips the blur itself; layer corner radius alone doesn't.
@@ -783,7 +783,13 @@ var hotKeyHandler: (() -> Void)?
         effect.wantsLayer = true
         effect.layer?.cornerRadius = radius
         effect.layer?.borderWidth = 1
-        effect.layer?.borderColor = NSColor.white.withAlphaComponent(0.12).cgColor
+        effect.layer?.borderColor = NSColor.separatorColor.cgColor
+        // Blur alone lets a white page (e.g. Google Sheets) wash the panel out; a mostly opaque tint keeps it legible.
+        let tint = NSView(frame: effect.bounds)
+        tint.wantsLayer = true
+        tint.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.8).cgColor
+        tint.autoresizingMask = [.width, .height]
+        effect.addSubview(tint)
         content.frame = effect.bounds
         content.autoresizingMask = [.width, .height]
         effect.addSubview(content)
@@ -970,6 +976,10 @@ func selfTest() {
         MarkdownBlock(kind: .numbered(level: 0, number: "1."), text: "First"),
         MarkdownBlock(kind: .paragraph, text: "Closing line."),
     ], "\(blocks)")
+    let tsv = [["Bank", "Total"], ["SBI", "15330"], ["HDFC", "41203"]]
+    precondition(parseMarkdownBlocks("Bank\tTotal\nSBI\t15330\nHDFC\t41203") == [MarkdownBlock(kind: .table(rows: tsv))])
+    precondition(parseMarkdownBlocks("| Bank | Total |\n|---|--:|\n| SBI | 15330 |\n| HDFC | 41203 |\nDone.")
+        == [MarkdownBlock(kind: .table(rows: tsv)), MarkdownBlock(kind: .paragraph, text: "Done.")])
     // 4-space nesting is one level deep, same as 2-space
     precondition(parseMarkdownBlocks("- a\n    - b").map(\.kind) == [.bullet(level: 0), .bullet(level: 1)])
     print("selftest ok")
