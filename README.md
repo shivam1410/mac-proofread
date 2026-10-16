@@ -20,7 +20,8 @@ What happens to the result depends on where the text is:
 Results shown in the panel are formatted Markdown: nested bullets (● ○ ▪), numbered lists, headings, **bold**, *italic*.
 Use **Copy** (⌘C; keeps the Markdown, so it pastes formatted into Notion) or **Replace Selection**.
 Return does the highlighted one: Replace Selection for editable text, Copy for read-only text.
-Edit the prompt first and Return asks again instead. Esc closes the panel.
+Edit the prompt first and Return asks again instead.
+**×** or Esc closes the panel. Clicking elsewhere closes it only while it's empty, so a typed prompt or a result survives a look at the page.
 
 The ✨ button appears after a drag-select, a double/triple-click, or a keyboard selection (⇧ + arrows, ⌘A).
 A drag or double-click counts only if it leaves a new selection, so moving a window, dragging a tab, or scrolling doesn't show it.

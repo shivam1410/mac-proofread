@@ -83,6 +83,11 @@ func showsInPanel(_ action: EditAction, editable: Bool) -> Bool {
     action.showsResult || action.isCustom || !editable
 }
 
+/// Clicking elsewhere dismisses an untouched panel; once something is typed or shown, only × or Esc closes it.
+func panelClosesOnClickAway(busy: Bool, prompt: String, hasResult: Bool) -> Bool {
+    !busy && !hasResult && prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+}
+
 /// Return in the prompt box accepts the shown result, unless the prompt was edited since it ran (then it asks again).
 func returnAccepts(result: String?, prompt: String, ranPrompt: String) -> Bool {
     result != nil && prompt == ranPrompt
@@ -338,17 +343,22 @@ struct PanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField("Ask about this", text: $model.custom)
-                .textFieldStyle(.roundedBorder)
-                .focused($focused)
-                .onSubmit {
-                    if let result = model.result,
-                       returnAccepts(result: result, prompt: model.custom, ranPrompt: model.ranPrompt) {
-                        accept(result)
-                    } else if !model.custom.isEmpty {
-                        model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true))
+            HStack(spacing: 6) {
+                TextField("Ask about this", text: $model.custom)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focused)
+                    // Spinner sits inside the box: no extra row, so the panel doesn't jump or get clipped.
+                    .overlay(alignment: .trailing) {
+                        if model.busy { ProgressView().controlSize(.small).padding(.trailing, 6) }
                     }
+                    .onSubmit(submit)
+                Button { model.close() } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 15)).foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
+                .help("Close (Esc)")
+                .accessibilityLabel("Close")
+            }
             // Buttons hug their labels; the leftover width goes between them, not inside them.
             HStack(spacing: 0) {
                 ForEach(Array(editActions.enumerated()), id: \.offset) { index, action in
@@ -356,9 +366,7 @@ struct PanelView: View {
                     Button(action.title) { model.run(action) }.fixedSize()
                 }
             }
-            if model.busy {
-                HStack { ProgressView().controlSize(.small); Text("Working…").foregroundStyle(.secondary) }
-            }
+            .disabled(model.busy)
             if let result = model.result { resultView(result) }
             if let error = model.error {
                 Text(error).foregroundStyle(.red).font(.caption).fixedSize(horizontal: false, vertical: true)
@@ -369,7 +377,6 @@ struct PanelView: View {
         // Blur alone lets a white page (e.g. Google Sheets) wash the panel out; a mostly opaque tint keeps it legible.
         // Drawn here, not as an extra NSView, because refit sizes the panel from the hosting view.
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.8), in: RoundedRectangle(cornerRadius: 12))
-        .disabled(model.busy)
         .onAppear { focused = true }
         .onExitCommand { model.close() }
     }
@@ -399,8 +406,17 @@ struct PanelView: View {
                     Button("Replace Selection") { model.replace(text) }
                 }
                 Spacer()
-                Button("Close") { model.close() }
             }
+        }
+    }
+
+    private func submit() {
+        guard !model.busy else { return }
+        if let result = model.result,
+           returnAccepts(result: result, prompt: model.custom, ranPrompt: model.ranPrompt) {
+            accept(result)
+        } else if !model.custom.isEmpty {
+            model.run(EditAction(title: "Custom", instruction: model.custom, isCustom: true))
         }
     }
 
@@ -812,7 +828,8 @@ var hotKeyHandler: (() -> Void)?
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        if panelModel?.busy != true { closePanel() }
+        guard let model = panelModel else { return }
+        if panelClosesOnClickAway(busy: model.busy, prompt: model.custom, hasResult: model.result != nil) { closePanel() }
     }
 
     private func paste(_ text: String) async {
@@ -951,6 +968,10 @@ func selfTest() {
     precondition(showsInPanel(typed, editable: true)) // typed prompts preview, even in editable text
     precondition(!showsInPanel(editActions[0], editable: true)) // Proofread replaces directly
     precondition(showsInPanel(editActions[0], editable: false)) // read-only text can't be replaced
+    precondition(panelClosesOnClickAway(busy: false, prompt: " ", hasResult: false))
+    precondition(!panelClosesOnClickAway(busy: false, prompt: "group by bank", hasResult: false)) // typing, checking the sheet
+    precondition(!panelClosesOnClickAway(busy: false, prompt: "", hasResult: true)) // result not acted on yet
+    precondition(!panelClosesOnClickAway(busy: true, prompt: "", hasResult: false))
     precondition(returnAccepts(result: "r", prompt: "q", ranPrompt: "q"))
     precondition(!returnAccepts(result: "r", prompt: "q2", ranPrompt: "q")) // edited prompt asks again
     precondition(!returnAccepts(result: nil, prompt: "q", ranPrompt: "q")) // nothing to accept yet
