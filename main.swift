@@ -612,6 +612,12 @@ var hotKeyHandler: (() -> Void)?
         statusItem.button?.image = NSImage(systemSymbolName: "wand.and.sparkles", accessibilityDescription: "Proofread")
         enableLoginOnFirstRun()
         let menu = NSMenu()
+        // Same as ⌃⌥E: the menu doesn't take focus, so the other app's selection is still there.
+        let editItem = menu.addItem(withTitle: "Edit Selection", action: #selector(triggerFromMenu), keyEquivalent: "e")
+        editItem.keyEquivalentModifierMask = [.control, .option]
+        editItem.target = self
+        editItem.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
+        menu.addItem(.separator())
         let settingsItem = menu.addItem(withTitle: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
@@ -658,6 +664,8 @@ var hotKeyHandler: (() -> Void)?
                                          GetApplicationEventTarget(), 0, &ref)
         if status != noErr { showAlert("Hotkey unavailable", "Could not register ⌃⌥E (error \(status)). Another app may own it.") }
     }
+
+    @objc func triggerFromMenu() { trigger() }
 
     func trigger() {
         guard panel == nil else { return }
