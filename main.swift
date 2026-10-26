@@ -951,6 +951,10 @@ func selfTest() {
     precondition(!shouldOfferButton(dragDistance: 40, clickCount: 1, before: "old", after: "old")) // moved window, stale selection
     precondition(shouldOfferButton(dragDistance: 0, clickCount: 3, before: "line", after: "line")) // re-selecting a selected line
     precondition(!shouldOfferButton(dragDistance: 2, clickCount: 1, before: "", after: "hello")) // plain click
+    let visible = NSRect(x: 0, y: 0, width: 1000, height: 800), size = NSSize(width: 42, height: 42)
+    precondition(buttonOrigin(near: NSPoint(x: 100, y: 100), size: size, visible: visible) == NSPoint(x: 108, y: 112))
+    precondition(buttonOrigin(near: NSPoint(x: 1200, y: 900), size: size, visible: visible) == NSPoint(x: 958, y: 758)) // past right/top
+    precondition(buttonOrigin(near: NSPoint(x: -50, y: -50), size: size, visible: visible) == NSPoint(x: 0, y: 0))
     precondition(!iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .text))
     precondition(!iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .unknown)) // Sheets: try ⌘C
     precondition(iconClickOpensMenu(rightClick: false, control: false, trusted: true, selection: .empty))

@@ -98,6 +98,13 @@ func shouldOfferButton(dragDistance: CGFloat, clickCount: Int, before: String?, 
     return clickCount >= 3 || after != before
 }
 
+/// Just above-right of `point`, kept inside `visible`: multi-line keyboard selections anchor at their
+/// top-right corner, which can sit past the screen edge or above the menu bar.
+func buttonOrigin(near point: NSPoint, size: NSSize, visible: NSRect) -> NSPoint {
+    NSPoint(x: min(max(point.x + 8, visible.minX), visible.maxX - size.width),
+            y: min(max(point.y + 12, visible.minY), visible.maxY - size.height))
+}
+
 final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
     // One click should press the button, not just focus the panel.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -208,7 +215,9 @@ struct SelectionButton: View {
         })
         panel.contentView = host
         panel.setContentSize(host.fittingSize)
-        panel.setFrameOrigin(NSPoint(x: point.x + 8, y: point.y + 12)) // just above-right of the cursor
+        let screen = NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main
+        let visible = screen?.visibleFrame ?? NSRect(origin: point, size: host.fittingSize)
+        panel.setFrameOrigin(buttonOrigin(near: point, size: host.fittingSize, visible: visible))
         panel.orderFrontRegardless()
         button = panel
         hideTask = Task { [weak self] in
