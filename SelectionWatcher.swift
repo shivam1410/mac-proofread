@@ -138,6 +138,7 @@ struct SelectionButton: View {
     private var button: NSPanel?
     private var hideTask: Task<Void, Never>?
     private var keySelectTask: Task<Void, Never>?
+    private var mouseSelectTask: Task<Void, Never>?
 
     init(onPick: @escaping () -> Void) { self.onPick = onPick }
 
@@ -166,9 +167,16 @@ struct SelectionButton: View {
             let clicks = event.clickCount
             let before = selectionAtPress
             guard Self.isEnabled, !isSuppressed(), distance > 6 || clicks >= 2 else { return }
-            Task {
-                await sleepMs(60) // let the app finish updating its selection
-                if shouldOfferButton(dragDistance: distance, clickCount: clicks, before: before, after: axSelectedText()) { show(at: up) }
+            mouseSelectTask = Task { [weak self] in
+                // Chromium/Electron apps can take a few hundred ms to report the new selection, so re-check a few times.
+                for _ in 0..<5 {
+                    await sleepMs(60)
+                    guard !Task.isCancelled, let self else { return }
+                    if shouldOfferButton(dragDistance: distance, clickCount: clicks, before: before, after: axSelectedText()) {
+                        self.show(at: up)
+                        return
+                    }
+                }
             }
         case .keyDown where isSelectionKey(keyCode: Int(event.keyCode), flags: event.modifierFlags):
             hide()
@@ -210,6 +218,7 @@ struct SelectionButton: View {
     }
 
     private func hide() {
+        mouseSelectTask?.cancel() // a click, key or scroll while still checking means the selection moved on
         hideTask?.cancel()
         hideTask = nil
         button?.orderOut(nil)
